@@ -52,11 +52,27 @@ export const evaluateTanka = async (tankaText: string): Promise<EvaluationResult
       throw new Error("AIからの応答を読み取れませんでした。もう一度お試しください。");
     }
 
-    // JSON文字列をパース（Markdownのコードブロックが含まれる場合の除去処理付き）
-    const jsonString = rawText.replace(/```json\n?|\n?```/g, "").trim();
+    // JSON抽出ロジックの強化:
+    // AIが "Here is the JSON: ```json { ... } ```" のように余計な文字をつける場合があるため、
+    // 最初の '{' から 最後の '}' までを抜き出す処理を行う。
+    const firstOpenBrace = rawText.indexOf('{');
+    const lastCloseBrace = rawText.lastIndexOf('}');
+
+    if (firstOpenBrace === -1 || lastCloseBrace === -1 || lastCloseBrace <= firstOpenBrace) {
+      console.error("No JSON object found in response:", rawText);
+      throw new Error("AIの応答形式が不正です。もう一度お試しください。");
+    }
+
+    // 必要な部分だけ切り抜く
+    const jsonString = rawText.substring(firstOpenBrace, lastCloseBrace + 1);
     
-    const result = JSON.parse(jsonString) as EvaluationResult;
-    return result;
+    try {
+      const result = JSON.parse(jsonString) as EvaluationResult;
+      return result;
+    } catch (parseError) {
+      console.error("JSON Parse Error:", parseError, "Raw JSON string:", jsonString);
+      throw new SyntaxError("データの読み込みに失敗しました。");
+    }
 
   } catch (error: any) {
     console.error("API Proxy Error:", error);
