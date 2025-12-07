@@ -8,6 +8,8 @@ export const evaluateTanka = async (tankaText: string): Promise<EvaluationResult
     // PHPバックエンドにPOSTリクエストを送信
     const response = await fetch(API_ENDPOINT, {
       method: "POST",
+      mode: 'cors', // CORS通信であることを明示
+      credentials: 'omit', // クッキーなどを送らない（CORSエラー回避のため重要）
       headers: {
         "Content-Type": "application/json",
       },
@@ -49,10 +51,24 @@ export const evaluateTanka = async (tankaText: string): Promise<EvaluationResult
 
   } catch (error: any) {
     console.error("API Proxy Error:", error);
+
+    // 通信自体が失敗した場合（Failed to fetch）の詳細な案内
+    if (error.message && error.message.includes('Failed to fetch')) {
+      throw new Error(
+        `サーバーに接続できませんでした。\n\n` +
+        `【考えられる原因】\n` +
+        `1. 設置したURLが間違っている (404)\n` +
+        `2. サーバー側でアクセス許可(CORS)が設定されていない\n` +
+        `3. インターネット接続がない\n\n` +
+        `管理者は ${API_ENDPOINT} をブラウザで開き、ファイルが存在するか確認してください。`
+      );
+    }
+
     // ユーザーに分かりやすいエラーメッセージに変換
     if (error.name === 'SyntaxError') {
       throw new Error("AIの応答形式に誤りがありました。別の短歌で再度お試しください。");
     }
+    
     throw error;
   }
 };
