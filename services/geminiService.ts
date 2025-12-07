@@ -66,12 +66,27 @@ export const evaluateTanka = async (tankaText: string): Promise<EvaluationResult
     // 必要な部分だけ切り抜く
     const jsonString = rawText.substring(firstOpenBrace, lastCloseBrace + 1);
     
+    // JSONパース（読み込み）の試行
     try {
+      // まずはそのままパースを試みる
       const result = JSON.parse(jsonString) as EvaluationResult;
       return result;
     } catch (parseError) {
-      console.error("JSON Parse Error:", parseError, "Raw JSON string:", jsonString);
-      throw new SyntaxError("データの読み込みに失敗しました。");
+      console.warn("First JSON Parse Failed. Trying to fix unescaped newlines...", parseError);
+      
+      // 失敗した場合のリカバリ策：
+      // AI（Flashモデル）は文字列の中に「本物の改行コード」を入れてしまい、JSONを壊すことがよくある。
+      // 対策として、改行コードをすべて「スペース」に置換してから再パースする。
+      // （構造上の改行も消えるが、JSONは空白を無視するので問題ない）
+      try {
+        const fixedJsonString = jsonString.replace(/\n/g, " ").replace(/\r/g, "");
+        const result = JSON.parse(fixedJsonString) as EvaluationResult;
+        return result;
+      } catch (retryError) {
+        console.error("Retry JSON Parse Failed:", retryError);
+        console.error("Raw string:", jsonString);
+        throw new SyntaxError("データの読み込みに失敗しました。");
+      }
     }
 
   } catch (error: any) {
@@ -91,7 +106,7 @@ export const evaluateTanka = async (tankaText: string): Promise<EvaluationResult
 
     // ユーザーに分かりやすいエラーメッセージに変換
     if (error.name === 'SyntaxError') {
-      throw new Error("AIの応答形式に誤りがありました。別の短歌で再度お試しください。");
+      throw new Error("AIの作成したデータに不備がありました。お手数ですが、もう一度ボタンを押してみてください。");
     }
     
     throw error;
