@@ -8,105 +8,127 @@ export const evaluateTanka = async (tankaText: string): Promise<EvaluationResult
     // PHPバックエンドにPOSTリクエストを送信
     const response = await fetch(API_ENDPOINT, {
       method: "POST",
-      mode: 'cors', // CORS通信であることを明示
-      credentials: 'omit', // クッキーなどを送らない（CORSエラー回避のため重要）
+      mode: 'cors',
+      credentials: 'omit',
       headers: {
         "Content-Type": "application/json",
       },
-      // 短歌のテキストのみを送信（プロンプトの組み立てはサーバー側で行う想定）
       body: JSON.stringify({ text: tankaText }),
     });
 
-    // 429エラー（リクエスト過多）の個別ハンドリング
     if (response.status === 429) {
-      throw new Error("申し訳ありません。現在アクセスが集中しており、AIの利用制限にかかりました。しばらく時間（1〜2分）を置いてから再度お試しください。");
+      throw new Error("現在アクセスが集中しており、AIの利用制限にかかりました。しばらく時間（1分程度）を置いてから再度お試しください。");
     }
 
     if (!response.ok) {
       const errorText = await response.text();
-      // HTMLエラーが返ってくる場合があるので、タグを除去して短く表示
-      const cleanError = errorText.replace(/<[^>]*>?/gm, '').slice(0, 100);
+      // HTMLタグを除去してエラー内容を表示
+      const cleanError = errorText.replace(/<[^>]*>?/gm, '').slice(0, 200);
       throw new Error(`サーバーエラー (${response.status}): ${cleanError}`);
+    }
+
+    // レスポンスがJSONかどうかを確認してからパース
+    const contentType = response.headers.get("content-type");
+    if (!contentType || !contentType.includes("application/json")) {
+      const text = await response.text();
+      
+      // JSON形式のエラーメッセージが返ってきているか確認
+      if (text.trim().startsWith('{')) {
+         try {
+           const jsonError = JSON.parse(text);
+           if (jsonError.error) throw new Error(`APIエラー: ${JSON.stringify(jsonError.error)}`);
+         } catch(e) {
+           // パースできなければ無視して下の処理へ
+         }
+      }
+
+      console.error("Invalid Content-Type:", contentType, "Response:", text);
+      throw new Error("サーバーからの応答が不正です（PHPエラーの可能性があります）。");
     }
 
     const data = await response.json();
 
-    // エラーハンドリング: PHP側がエラーJSONを返してきた場合
+    // PHP側からのエラーハンドリング
     if (data.error) {
-      // PHPからの429エラー転送もここでキャッチ
       if (typeof data.error === 'string' && data.error.includes('429')) {
-         throw new Error("申し訳ありません。AIの利用制限にかかりました。しばらく時間を置いてから再度お試しください。");
+         throw new Error("AIの利用制限にかかりました。少し待ってから再試行してください。");
       }
       throw new Error(`APIエラー: ${JSON.stringify(data.error)}`);
     }
 
-    // Gemini APIの生レスポンス構造からテキストを抽出
+    // Gemini APIのレスポンス構造チェック
     const candidate = data.candidates?.[0];
+    
+    // Safety Filter（不適切な表現としてブロックされた場合）のチェック
+    if (candidate?.finishReason === 'SAFETY') {
+      throw new Error("入力された短歌の内容が、AIの安全基準（暴力的・性的など）によりブロックされました。表現を変更してお試しください。");
+    }
+
     const part = candidate?.content?.parts?.[0];
     const rawText = part?.text;
 
     if (!rawText) {
-      console.error("Unexpected API response format:", data);
-      throw new Error("AIからの応答を読み取れませんでした。もう一度お試しください。");
+      console.error("Empty rawText. Full Data:", data);
+      throw new Error("AIからの応答が空でした。もう一度お試しください。");
     }
 
-    // JSON抽出ロジックの強化:
-    const firstOpenBrace = rawText.indexOf('{');
-    const lastCloseBrace = rawText.lastIndexOf('}');
+    // === JSON抽出とクリーニング ===
+    
+    // 1. Markdownコードブロックの除去
+    let cleanText = rawText.replace(/```json/g, '').replace(/```/g, '');
+
+    // 2. 最も外側の {} を探す
+    const firstOpenBrace = cleanText.indexOf('{');
+    const lastCloseBrace = cleanText.lastIndexOf('}');
 
     if (firstOpenBrace === -1 || lastCloseBrace === -1 || lastCloseBrace <= firstOpenBrace) {
-      console.error("No JSON object found in response:", rawText);
-      throw new Error("AIの応答形式が不正です。もう一度お試しください。");
+      console.error("No JSON braces found. Raw:", rawText);
+      throw new Error("AIが有効なデータを生成できませんでした。(JSON形式エラー)");
     }
 
-    // 必要な部分だけ切り抜く
-    const jsonString = rawText.substring(firstOpenBrace, lastCloseBrace + 1);
-    
-    // JSONパース（読み込み）の試行
-    try {
-      // まずはそのままパースを試みる
-      const result = JSON.parse(jsonString) as EvaluationResult;
-      return result;
-    } catch (parseError) {
-      console.warn("First JSON Parse Failed. Trying to fix JSON format...", parseError);
-      
-      // 失敗した場合の強力なリカバリ策：
-      // 1. 改行コードを全てスペースに置換 (AIが改行を入れてしまう問題の対策)
-      // 2. 末尾の不要なカンマを削除 (例: "score": 10, } -> "score": 10 })
-      try {
-        let fixedJsonString = jsonString
-          .replace(/\n/g, " ")  // 改行を削除
-          .replace(/\r/g, "")
-          .replace(/,\s*}/g, '}') // 末尾カンマ削除(オブジェクト)
-          .replace(/,\s*]/g, ']'); // 末尾カンマ削除(配列)
+    // {} の中身だけを切り出す
+    let jsonString = cleanText.substring(firstOpenBrace, lastCloseBrace + 1);
 
-        const result = JSON.parse(fixedJsonString) as EvaluationResult;
-        return result;
-      } catch (retryError) {
-        console.error("Retry JSON Parse Failed:", retryError);
-        console.error("Raw string:", jsonString);
-        throw new SyntaxError("データの読み込みに失敗しました。");
+    // === JSONパース試行 ===
+    try {
+      // Step 1: 通常のパース
+      return JSON.parse(jsonString) as EvaluationResult;
+    } catch (strictError) {
+      console.warn("Strict JSON Parse failed. Attempting loose parse...", strictError);
+
+      try {
+        // Step 2: ゆるいパース（修復）
+        // 改行をスペースに、末尾のカンマを削除
+        let fixedJson = jsonString
+          .replace(/[\n\r]/g, " ") // 改行をスペースに
+          .replace(/,\s*}/g, '}')  // 末尾カンマ削除 }
+          .replace(/,\s*]/g, ']'); // 末尾カンマ削除 ]
+        
+        return JSON.parse(fixedJson) as EvaluationResult;
+      } catch (looseError) {
+        console.warn("Loose JSON Parse failed. Attempting eval parse...", looseError);
+
+        try {
+           // Step 3: 最終手段 (new Function)
+           // これは通常のJSON.parseより許容範囲が広い（末尾カンマやシングルクォートを許す）
+           // AIの出力データなのでセキュリティリスクは限定的と判断
+           const looseJsonParser = new Function("return " + jsonString);
+           return looseJsonParser() as EvaluationResult;
+        } catch (evalError) {
+          console.error("All parse attempts failed.", evalError);
+          console.error("Problematic JSON:", jsonString);
+          throw new Error("AIの応答データを読み取れませんでした。もう一度ボタンを押して再生成してください。");
+        }
       }
     }
 
   } catch (error: any) {
-    console.error("API Proxy Error:", error);
+    console.error("EvaluateTanka Error:", error);
 
-    // 通信自体が失敗した場合（Failed to fetch）の詳細な案内
     if (error.message && error.message.includes('Failed to fetch')) {
       throw new Error(
-        `サーバーに接続できませんでした。\n\n` +
-        `【考えられる原因】\n` +
-        `1. 設置したURLが間違っている (404)\n` +
-        `2. サーバー側でアクセス許可(CORS)が設定されていない\n` +
-        `3. インターネット接続がない\n\n` +
-        `管理者は ${API_ENDPOINT} をブラウザで開き、ファイルが存在するか確認してください。`
+        "サーバー通信エラー。\nURL設定やCORS許可を確認してください。\n(Failed to fetch)"
       );
-    }
-
-    // ユーザーに分かりやすいエラーメッセージに変換
-    if (error.name === 'SyntaxError') {
-      throw new Error("AIの作成したデータに不備がありました。お手数ですが、もう一度ボタンを押してみてください。");
     }
     
     throw error;
