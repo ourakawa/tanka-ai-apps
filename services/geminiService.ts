@@ -17,6 +17,11 @@ export const evaluateTanka = async (tankaText: string): Promise<EvaluationResult
       body: JSON.stringify({ text: tankaText }),
     });
 
+    // 429エラー（リクエスト過多）の個別ハンドリング
+    if (response.status === 429) {
+      throw new Error("申し訳ありません。現在アクセスが集中しており、AIの利用制限にかかりました。しばらく時間（1〜2分）を置いてから再度お試しください。");
+    }
+
     if (!response.ok) {
       const errorText = await response.text();
       // HTMLエラーが返ってくる場合があるので、タグを除去して短く表示
@@ -28,7 +33,11 @@ export const evaluateTanka = async (tankaText: string): Promise<EvaluationResult
 
     // エラーハンドリング: PHP側がエラーJSONを返してきた場合
     if (data.error) {
-      throw new Error(`APIエラー: ${data.error}`);
+      // PHPからの429エラー転送もここでキャッチ
+      if (typeof data.error === 'string' && data.error.includes('429')) {
+         throw new Error("申し訳ありません。AIの利用制限にかかりました。しばらく時間を置いてから再度お試しください。");
+      }
+      throw new Error(`APIエラー: ${JSON.stringify(data.error)}`);
     }
 
     // Gemini APIの生レスポンス構造からテキストを抽出
