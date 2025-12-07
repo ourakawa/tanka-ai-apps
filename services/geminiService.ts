@@ -41,8 +41,6 @@ export const evaluateTanka = async (tankaText: string): Promise<EvaluationResult
     }
 
     // Gemini APIの生レスポンス構造からテキストを抽出
-    // 構造: data.candidates[0].content.parts[0].text
-    // ※ PHP側で整形せずにそのままGoogleのレスポンスを返している前提
     const candidate = data.candidates?.[0];
     const part = candidate?.content?.parts?.[0];
     const rawText = part?.text;
@@ -53,8 +51,6 @@ export const evaluateTanka = async (tankaText: string): Promise<EvaluationResult
     }
 
     // JSON抽出ロジックの強化:
-    // AIが "Here is the JSON: ```json { ... } ```" のように余計な文字をつける場合があるため、
-    // 最初の '{' から 最後の '}' までを抜き出す処理を行う。
     const firstOpenBrace = rawText.indexOf('{');
     const lastCloseBrace = rawText.lastIndexOf('}');
 
@@ -72,14 +68,18 @@ export const evaluateTanka = async (tankaText: string): Promise<EvaluationResult
       const result = JSON.parse(jsonString) as EvaluationResult;
       return result;
     } catch (parseError) {
-      console.warn("First JSON Parse Failed. Trying to fix unescaped newlines...", parseError);
+      console.warn("First JSON Parse Failed. Trying to fix JSON format...", parseError);
       
-      // 失敗した場合のリカバリ策：
-      // AI（Flashモデル）は文字列の中に「本物の改行コード」を入れてしまい、JSONを壊すことがよくある。
-      // 対策として、改行コードをすべて「スペース」に置換してから再パースする。
-      // （構造上の改行も消えるが、JSONは空白を無視するので問題ない）
+      // 失敗した場合の強力なリカバリ策：
+      // 1. 改行コードを全てスペースに置換 (AIが改行を入れてしまう問題の対策)
+      // 2. 末尾の不要なカンマを削除 (例: "score": 10, } -> "score": 10 })
       try {
-        const fixedJsonString = jsonString.replace(/\n/g, " ").replace(/\r/g, "");
+        let fixedJsonString = jsonString
+          .replace(/\n/g, " ")  // 改行を削除
+          .replace(/\r/g, "")
+          .replace(/,\s*}/g, '}') // 末尾カンマ削除(オブジェクト)
+          .replace(/,\s*]/g, ']'); // 末尾カンマ削除(配列)
+
         const result = JSON.parse(fixedJsonString) as EvaluationResult;
         return result;
       } catch (retryError) {
