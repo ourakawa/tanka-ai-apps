@@ -1,3 +1,4 @@
+
 import React, { useState } from 'react';
 
 interface TankaInputProps {
@@ -26,7 +27,7 @@ const TankaInput: React.FC<TankaInputProps> = ({ onAnalyze, isLoading }) => {
           <textarea
             value={text}
             onChange={(e) => setText(e.target.value)}
-            placeholder="例：&#13;&#10;春の夜の夢ばかりなる手枕に&#13;&#10;かひなく立たむ名こそ惜しけれ"
+            placeholder={'例：\n春の夜の夢ばかりなる手枕に\nかひなく立たむ名こそ惜しけれ'}
             className="w-full h-48 p-4 text-lg md:text-xl border-2 border-slate-300 rounded-lg focus:border-indigo-500 focus:ring-2 focus:ring-indigo-200 focus:outline-none resize-none font-serif leading-loose placeholder-slate-300 text-slate-800 transition-all"
             disabled={isLoading}
             aria-label="短歌入力欄"

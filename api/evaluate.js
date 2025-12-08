@@ -1,5 +1,7 @@
 
 export default async function handler(req, res) {
+  // Version: 1.5-Stable-Fix
+  
   // 1. CORS設定（どこからでもアクセス許可）
   res.setHeader('Access-Control-Allow-Origin', '*');
   res.setHeader('Access-Control-Allow-Methods', 'POST, OPTIONS');
@@ -33,8 +35,12 @@ export default async function handler(req, res) {
     }
 
     // 5. Gemini API (1.5 Flash Stable) を呼び出す
-    // 最も安定しており、エラーが出にくく、コストパフォーマンスが良いモデル
-    const url = `https://generativelanguage.googleapis.com/v1beta/models/gemini-1.5-flash:generateContent?key=${apiKey}`;
+    // 実験版(2.0-flash-exp)は無料枠制限が厳しいため、安定版(1.5-flash)を使用。
+    // 課金設定をしている場合、こちらは青天井で利用可能。
+    const model = 'gemini-1.5-flash';
+    const url = `https://generativelanguage.googleapis.com/v1beta/models/${model}:generateContent?key=${apiKey}`;
+
+    console.log(`Requesting Gemini Model: ${model}`); // デバッグ用ログ
 
     const systemPrompt = `
 あなたは熟練の歌人であり、短歌の指導者です。
