@@ -1,6 +1,6 @@
 
 export default async function handler(req, res) {
-  // Version: 2.5-Flash-Fix
+  // Version: 2.5-Flash-Update-Features
   
   // 1. CORS設定（どこからでもアクセス許可）
   res.setHeader('Access-Control-Allow-Origin', '*');
@@ -35,19 +35,29 @@ export default async function handler(req, res) {
     }
 
     // 5. Gemini API (gemini-2.5-flash) を呼び出す
-    // エラー回避のため、システム推奨の gemini-2.5-flash を使用します。
     const model = 'gemini-2.5-flash';
     const url = `https://generativelanguage.googleapis.com/v1beta/models/${model}:generateContent?key=${apiKey}`;
 
-    console.log(`Requesting Gemini Model: ${model}`); // デバッグ用ログ
+    console.log(`Requesting Gemini Model: ${model}`);
 
     const systemPrompt = `
 あなたは熟練の歌人であり、短歌の指導者です。
 ユーザーから入力された短歌を評価し、必ず【純粋なJSON形式のみ】で出力してください。
 Markdown記法（\`\`\`jsonなど）や挨拶文は一切不要です。
 
+【重要指示】
+1. **短歌の分解**: 入力された短歌を、初句・二句・三句・四句・結句の5つのパーツに分解し、それぞれの正確な音数（モーラ数）を数えてください。（例：「きゃ」は1音）
+2. **参考作品の選定**: 「sample」セクションには、**必ず実在する有名な近現代短歌（俵万智、穂村弘、寺山修司など）** を引用してください。**AIが創作した架空の短歌は絶対に禁止**です。
+
 【JSONの構造】
 {
+  "inputAnalysis": [
+    { "part": "初句のテキスト", "syllables": 音数(数値) },
+    { "part": "二句のテキスト", "syllables": 音数(数値) },
+    { "part": "三句のテキスト", "syllables": 音数(数値) },
+    { "part": "四句のテキスト", "syllables": 音数(数値) },
+    { "part": "結句のテキスト", "syllables": 音数(数値) }
+  ],
   "scores": { "rhythm": 0-30, "imagery": 0-30, "originality": 0-40, "total": 0-100 },
   "comments": { 
      "rhythm": "文字列", 
@@ -65,9 +75,9 @@ Markdown記法（\`\`\`jsonなど）や挨拶文は一切不要です。
     "nextTopicRecommendation": "文字列"
   },
   "sample": {
-    "text": "文字列",
-    "author": "文字列",
-    "explanation": "文字列"
+    "text": "実在する有名な短歌の引用",
+    "author": "その短歌の作者名",
+    "explanation": "解説"
   }
 }`;
 

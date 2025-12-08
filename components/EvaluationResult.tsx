@@ -27,7 +27,40 @@ const EvaluationResult: React.FC<EvaluationResultProps> = ({ result, onReset }) 
   return (
     <div className="w-full max-w-4xl mx-auto flex flex-col gap-8 pb-12">
       
-      {/* Total Score Section */}
+      {/* 1. User's Tanka Analysis (New Feature) */}
+      <section className="bg-white rounded-xl shadow-lg border-2 border-indigo-100 overflow-hidden">
+        <div className="bg-indigo-50 px-6 py-4 border-b border-indigo-100 flex items-center justify-between">
+           <h2 className="text-lg font-bold text-indigo-800 flex items-center gap-2">
+             <span className="text-xl">🪶</span> あなたの短歌
+           </h2>
+           <span className="text-xs text-indigo-400 bg-white px-2 py-1 rounded border border-indigo-100">
+             音数分析
+           </span>
+        </div>
+        <div className="p-6 md:p-8">
+          <div className="flex flex-wrap justify-center items-start gap-4 md:gap-8 writing-vertical-fix">
+            {result.inputAnalysis && result.inputAnalysis.map((phrase, idx) => (
+              <div key={idx} className="flex flex-col items-center gap-2 group">
+                {/* Tanka Phrase */}
+                <div className="text-2xl md:text-3xl font-serif text-slate-800 font-medium tracking-widest vertical-text py-2">
+                  {phrase.part}
+                </div>
+                {/* Syllable Badge */}
+                <span className={`
+                  px-3 py-1 rounded-full text-xs md:text-sm font-bold shadow-sm transition-colors
+                  ${(idx === 0 || idx === 2) && phrase.syllables === 5 ? 'bg-emerald-100 text-emerald-700' : ''}
+                  ${(idx === 1 || idx === 3 || idx === 4) && phrase.syllables === 7 ? 'bg-emerald-100 text-emerald-700' : ''}
+                  ${!((idx === 0 || idx === 2) && phrase.syllables === 5) && !((idx === 1 || idx === 3 || idx === 4) && phrase.syllables === 7) ? 'bg-slate-100 text-slate-500' : ''}
+                `}>
+                  {phrase.syllables}音
+                </span>
+              </div>
+            ))}
+          </div>
+        </div>
+      </section>
+
+      {/* 2. Total Score Section */}
       <section className="bg-white rounded-xl shadow-lg border-2 border-indigo-50 overflow-hidden">
         <div className="bg-indigo-600 text-white p-4 text-center">
           <h2 className="text-xl font-bold tracking-widest">総合評価</h2>
@@ -73,7 +106,7 @@ const EvaluationResult: React.FC<EvaluationResultProps> = ({ result, onReset }) 
         </div>
       </section>
 
-      {/* Teacher's Comments */}
+      {/* 3. Teacher's Comments */}
       <section className="bg-white rounded-xl shadow-md p-6 md:p-8 border-l-8 border-indigo-400">
         <h3 className="text-xl font-bold text-slate-700 mb-4 flex items-center">
           <span className="text-2xl mr-2">📝</span> 先生からのコメント
@@ -97,7 +130,7 @@ const EvaluationResult: React.FC<EvaluationResultProps> = ({ result, onReset }) 
         </div>
       </section>
 
-      {/* Revision Advice */}
+      {/* 4. Revision Advice */}
       <section className="bg-white rounded-xl shadow-md p-6 md:p-8">
         <h3 className="text-xl font-bold text-slate-700 mb-6 flex items-center">
           <span className="text-2xl mr-2">💡</span> 推敲のアドバイス
@@ -124,7 +157,7 @@ const EvaluationResult: React.FC<EvaluationResultProps> = ({ result, onReset }) 
         </div>
       </section>
 
-      {/* Theme & Sample */}
+      {/* 5. Theme & Sample */}
       <div className="grid md:grid-cols-2 gap-8">
         {/* Theme Analysis */}
         <section className="bg-white rounded-xl shadow-md p-6 border-t-4 border-pink-300">
@@ -152,7 +185,7 @@ const EvaluationResult: React.FC<EvaluationResultProps> = ({ result, onReset }) 
         {/* Reference Tanka */}
         <section className="bg-white rounded-xl shadow-md p-6 border-t-4 border-teal-300">
           <h3 className="text-lg font-bold text-slate-700 mb-4">
-            📖 参考になる一首
+            📖 参考になる一首 (実在する名歌)
           </h3>
           <blockquote className="relative p-4 bg-teal-50 rounded-lg mb-4">
              <p className="font-serif text-xl text-slate-800 leading-loose mb-2">

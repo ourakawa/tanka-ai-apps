@@ -29,7 +29,13 @@ export interface SampleTanka {
   explanation: string;
 }
 
+export interface TankaPhrase {
+  part: string;      // 句のテキスト（例：「春の夜の」）
+  syllables: number; // 音数（例：5）
+}
+
 export interface EvaluationResult {
+  inputAnalysis: TankaPhrase[]; // 短歌の分解データ（5句分）
   scores: TankaScores;
   comments: TankaComments;
   advice: RevisionAdvice[];
