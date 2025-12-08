@@ -1,6 +1,6 @@
 
 export default async function handler(req, res) {
-  // Version: 1.5-Stable-Fix
+  // Version: 2.5-Flash-Fix
   
   // 1. CORS設定（どこからでもアクセス許可）
   res.setHeader('Access-Control-Allow-Origin', '*');
@@ -34,10 +34,9 @@ export default async function handler(req, res) {
       return;
     }
 
-    // 5. Gemini API (1.5 Flash Stable) を呼び出す
-    // 実験版(2.0-flash-exp)は無料枠制限が厳しいため、安定版(1.5-flash)を使用。
-    // 課金設定をしている場合、こちらは青天井で利用可能。
-    const model = 'gemini-1.5-flash';
+    // 5. Gemini API (gemini-2.5-flash) を呼び出す
+    // エラー回避のため、システム推奨の gemini-2.5-flash を使用します。
+    const model = 'gemini-2.5-flash';
     const url = `https://generativelanguage.googleapis.com/v1beta/models/${model}:generateContent?key=${apiKey}`;
 
     console.log(`Requesting Gemini Model: ${model}`); // デバッグ用ログ
