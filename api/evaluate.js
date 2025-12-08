@@ -1,3 +1,4 @@
+
 export default async function handler(req, res) {
   // 1. CORS設定（どこからでもアクセス許可）
   res.setHeader('Access-Control-Allow-Origin', '*');
@@ -31,9 +32,9 @@ export default async function handler(req, res) {
       return;
     }
 
-    // 5. Gemini API (2.0 Flash Experimental) を呼び出す
-    // 安くて、速くて、JSON指示に従順な最新モデル
-    const url = `https://generativelanguage.googleapis.com/v1beta/models/gemini-2.0-flash-exp:generateContent?key=${apiKey}`;
+    // 5. Gemini API (1.5 Flash Stable) を呼び出す
+    // 最も安定しており、エラーが出にくく、コストパフォーマンスが良いモデル
+    const url = `https://generativelanguage.googleapis.com/v1beta/models/gemini-1.5-flash:generateContent?key=${apiKey}`;
 
     const systemPrompt = `
 あなたは熟練の歌人であり、短歌の指導者です。
@@ -80,12 +81,14 @@ Markdown記法（\`\`\`jsonなど）や挨拶文は一切不要です。
 
     const data = await response.json();
 
+    // Google側のエラーチェック
     if (data.error) {
       console.error("Gemini API Error:", data.error);
       res.status(500).json({ error: data.error.message });
       return;
     }
 
+    // 結果をそのまま返す
     res.status(200).json(data);
 
   } catch (error) {
