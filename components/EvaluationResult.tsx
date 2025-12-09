@@ -113,8 +113,8 @@ const EvaluationResult: React.FC<EvaluationResultProps> = ({ result, onReset }) 
 
       {/* 3. AI Comments (Renamed & Enhanced) */}
       <section className="bg-white rounded-xl shadow-md p-6 md:p-8 border-l-8 border-indigo-400">
-        <h3 className="text-xl font-bold text-slate-700 mb-4 flex items-center">
-          <span className="text-2xl mr-2">🤖</span> AIからのコメント
+        <h3 className="text-xl font-bold text-slate-700 mb-4 flex items-center justify-between">
+          <span className="flex items-center"><span className="text-2xl mr-2">🤖</span> AIからのコメント</span>
         </h3>
         <p className="text-lg leading-loose text-slate-700 font-serif mb-6 whitespace-pre-wrap">
           {result.comments.general}
@@ -211,7 +211,13 @@ const EvaluationResult: React.FC<EvaluationResultProps> = ({ result, onReset }) 
         </section>
       </div>
 
-      <div className="text-center mt-8">
+      {/* Model Display & Retry Button */}
+      <div className="text-center mt-8 space-y-4">
+        {result.usedModel && (
+          <div className="text-xs text-slate-300 font-mono">
+            Generation Model: {result.usedModel}
+          </div>
+        )}
         <button
           onClick={onReset}
           className="bg-slate-600 text-white px-8 py-4 rounded-full text-lg shadow-lg hover:bg-slate-700 transition-colors flex items-center justify-center mx-auto gap-2"

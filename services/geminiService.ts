@@ -27,6 +27,9 @@ export const evaluateTanka = async (tankaText: string): Promise<EvaluationResult
 
     const data = await response.json();
 
+    // ★バックエンドから送られてきたモデル名を取得
+    const usedModel = data.usedModel;
+
     // Geminiからの応答データを解析
     const candidate = data.candidates?.[0];
     
@@ -46,7 +49,10 @@ export const evaluateTanka = async (tankaText: string): Promise<EvaluationResult
     cleanText = cleanText.replace(/^```json/, '').replace(/^```/, '').replace(/```$/, '');
     
     try {
-      return JSON.parse(cleanText) as EvaluationResult;
+      const parsedResult = JSON.parse(cleanText) as EvaluationResult;
+      // モデル名を結果オブジェクトに結合
+      parsedResult.usedModel = usedModel;
+      return parsedResult;
     } catch (e) {
       console.error("JSON Parse Error:", cleanText);
       throw new Error("評価データの読み込みに失敗しました。");

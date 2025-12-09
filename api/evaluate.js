@@ -1,5 +1,5 @@
 export default async function handler(req, res) {
-  // Version: 5.0-Stable-Model-List
+  // Version: 6.0-Latest-Models-Priority
   
   // 1. CORS設定
   res.setHeader('Access-Control-Allow-Origin', '*');
@@ -29,16 +29,15 @@ export default async function handler(req, res) {
       return;
     }
 
-    // ★総当たりモデルリスト
-    // 具体的なバージョン番号を指定することで「Not Found」を回避します。
-    // Flash系を優先して高速化を図り、だめならPro系、最後に実験版を試します。
+    // ★総当たりモデルリスト（最新モデル優先）
+    // ユーザーの要望「できるだけ最新のモデル」に基づき、2.0系や1.5 Pro最新版を優先します。
+    // エラーが出た場合は、下の安定版へ自動的にフォールバックします。
     const modelsToTry = [
-      'gemini-1.5-flash',
-      'gemini-1.5-flash-002',
-      'gemini-1.5-flash-latest',
-      'gemini-1.5-pro',
-      'gemini-1.5-pro-002',
-      'gemini-2.0-flash-exp'
+      'gemini-2.0-flash-exp',    // 最新世代
+      'gemini-1.5-pro-002',      // 1.5世代の最高性能(最新)
+      'gemini-1.5-pro',          // 1.5世代の最高性能(安定)
+      'gemini-1.5-flash-002',    // 1.5世代の高速版(最新)
+      'gemini-1.5-flash'         // 最後の砦(最も安定)
     ];
 
     let lastError = null;
@@ -127,6 +126,8 @@ Markdown装飾や挨拶は不要です。即座にJSONデータを出力して�
         }
 
         // 成功！
+        data.usedModel = model;
+        
         res.status(200).json(data);
         return;
 

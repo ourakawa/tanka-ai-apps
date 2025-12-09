@@ -43,6 +43,7 @@ export interface EvaluationResult {
   advice: RevisionAdvice[];
   theme: ThemeAnalysis;
   sample: SampleTanka;
+  usedModel?: string; // ★使用されたGeminiモデル名
 }
 
 export enum AppState {
