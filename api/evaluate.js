@@ -1,5 +1,5 @@
 export default async function handler(req, res) {
-  // Version: 3.1-Hiragana-Count-DoubleComment
+  // Version: 3.2-Stable-Flash-1.5
   
   // 1. CORS設定
   res.setHeader('Access-Control-Allow-Origin', '*');
@@ -29,8 +29,9 @@ export default async function handler(req, res) {
       return;
     }
 
-    // 高速な gemini-2.5-flash を使用
-    const model = 'gemini-2.5-flash';
+    // ★モデルを安定版の gemini-1.5-flash に変更
+    // 課金有効化されたプロジェクトであれば、レート制限エラーを回避できます。
+    const model = 'gemini-1.5-flash';
     const url = `https://generativelanguage.googleapis.com/v1beta/models/${model}:generateContent?key=${apiKey}`;
 
     const systemPrompt = `
@@ -94,6 +95,24 @@ Markdown装飾や挨拶は不要です。即座にJSONデータを出力して�
         }
       })
     });
+
+    // レスポンスのステータスチェック（404などが返ってきていないか）
+    if (!response.ok) {
+      const errorText = await response.text();
+      console.error("Gemini API Error Response:", response.status, errorText);
+      
+      let errorMessage = `AIサーバーエラー (${response.status})`;
+      try {
+        const errorJson = JSON.parse(errorText);
+        if (errorJson.error && errorJson.error.message) {
+          errorMessage = errorJson.error.message;
+        }
+      } catch (e) {
+        // JSONパースエラー時は生のテキストを使用
+      }
+      res.status(response.status).json({ error: errorMessage });
+      return;
+    }
 
     const data = await response.json();
 
