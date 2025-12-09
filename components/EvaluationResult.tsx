@@ -27,36 +27,40 @@ const EvaluationResult: React.FC<EvaluationResultProps> = ({ result, onReset }) 
   return (
     <div className="w-full max-w-4xl mx-auto flex flex-col gap-8 pb-12">
       
-      {/* 1. User's Tanka Analysis (New Feature) */}
+      {/* 1. User's Tanka Analysis with Reading */}
       <section className="bg-white rounded-xl shadow-lg border-2 border-indigo-100 overflow-hidden">
         <div className="bg-indigo-50 px-6 py-4 border-b border-indigo-100 flex items-center justify-between">
            <h2 className="text-lg font-bold text-indigo-800 flex items-center gap-2">
-             <span className="text-xl">🪶</span> あなたの短歌
+             <span className="text-xl">🪶</span> あなたの短歌（音数分析）
            </h2>
-           <span className="text-xs text-indigo-400 bg-white px-2 py-1 rounded border border-indigo-100">
-             音数分析
-           </span>
         </div>
         <div className="p-6 md:p-8">
-          <div className="flex flex-wrap justify-center items-start gap-4 md:gap-8 writing-vertical-fix">
+          <div className="flex flex-wrap justify-center items-start gap-3 md:gap-6">
             {result.inputAnalysis && result.inputAnalysis.map((phrase, idx) => (
-              <div key={idx} className="flex flex-col items-center gap-2 group">
-                {/* Tanka Phrase */}
-                <div className="text-2xl md:text-3xl font-serif text-slate-800 font-medium tracking-widest vertical-text py-2">
+              <div key={idx} className="flex flex-col items-center p-3 bg-slate-50 rounded-lg border border-slate-100 min-w-[4rem]">
+                {/* Reading (Hiragana) - NEW FEATURE */}
+                <span className="text-xs text-indigo-500 mb-1 font-bold tracking-wider">
+                  {phrase.reading}
+                </span>
+                {/* Kanji */}
+                <div className="text-xl md:text-2xl font-serif text-slate-800 font-bold mb-2 writing-horizontal">
                   {phrase.part}
                 </div>
-                {/* Syllable Badge */}
+                {/* Syllable Count */}
                 <span className={`
-                  px-3 py-1 rounded-full text-xs md:text-sm font-bold shadow-sm transition-colors
+                  px-3 py-1 rounded-full text-xs font-bold shadow-sm transition-colors whitespace-nowrap
                   ${(idx === 0 || idx === 2) && phrase.syllables === 5 ? 'bg-emerald-100 text-emerald-700' : ''}
                   ${(idx === 1 || idx === 3 || idx === 4) && phrase.syllables === 7 ? 'bg-emerald-100 text-emerald-700' : ''}
-                  ${!((idx === 0 || idx === 2) && phrase.syllables === 5) && !((idx === 1 || idx === 3 || idx === 4) && phrase.syllables === 7) ? 'bg-slate-100 text-slate-500' : ''}
+                  ${!((idx === 0 || idx === 2) && phrase.syllables === 5) && !((idx === 1 || idx === 3 || idx === 4) && phrase.syllables === 7) ? 'bg-amber-100 text-amber-700' : ''}
                 `}>
                   {phrase.syllables}音
                 </span>
               </div>
             ))}
           </div>
+          <p className="text-center text-xs text-slate-400 mt-4">
+             ※AIが読み（ひらがな）を判定して音数を計算しています。読みが意図と異なる場合は音数も変わる可能性があります。
+          </p>
         </div>
       </section>
 
@@ -106,26 +110,26 @@ const EvaluationResult: React.FC<EvaluationResultProps> = ({ result, onReset }) 
         </div>
       </section>
 
-      {/* 3. Teacher's Comments */}
+      {/* 3. AI Comments (Renamed & Enhanced) */}
       <section className="bg-white rounded-xl shadow-md p-6 md:p-8 border-l-8 border-indigo-400">
         <h3 className="text-xl font-bold text-slate-700 mb-4 flex items-center">
-          <span className="text-2xl mr-2">📝</span> 先生からのコメント
+          <span className="text-2xl mr-2">🤖</span> AIからのコメント
         </h3>
-        <p className="text-lg leading-loose text-slate-700 font-serif mb-6">
+        <p className="text-lg leading-loose text-slate-700 font-serif mb-6 whitespace-pre-wrap">
           {result.comments.general}
         </p>
         <div className="grid md:grid-cols-2 gap-6 text-sm">
-          <div className="bg-indigo-50 p-4 rounded-lg">
-            <strong className="block text-indigo-800 mb-2">♪ リズムについて</strong>
-            <p className="text-slate-700">{result.comments.rhythm}</p>
+          <div className="bg-indigo-50 p-5 rounded-lg">
+            <strong className="block text-indigo-800 mb-3 text-base border-b border-indigo-200 pb-2">♪ リズムについて</strong>
+            <p className="text-slate-700 leading-relaxed whitespace-pre-wrap">{result.comments.rhythm}</p>
           </div>
-          <div className="bg-emerald-50 p-4 rounded-lg">
-            <strong className="block text-emerald-800 mb-2">✿ 表現について</strong>
-            <p className="text-slate-700">{result.comments.imagery}</p>
+          <div className="bg-emerald-50 p-5 rounded-lg">
+            <strong className="block text-emerald-800 mb-3 text-base border-b border-emerald-200 pb-2">✿ 表現について</strong>
+            <p className="text-slate-700 leading-relaxed whitespace-pre-wrap">{result.comments.imagery}</p>
           </div>
-          <div className="bg-amber-50 p-4 rounded-lg md:col-span-2">
-            <strong className="block text-amber-800 mb-2">★ 独創性について</strong>
-            <p className="text-slate-700">{result.comments.originality}</p>
+          <div className="bg-amber-50 p-5 rounded-lg md:col-span-2">
+            <strong className="block text-amber-800 mb-3 text-base border-b border-amber-200 pb-2">★ 独創性について</strong>
+            <p className="text-slate-700 leading-relaxed whitespace-pre-wrap">{result.comments.originality}</p>
           </div>
         </div>
       </section>
@@ -137,15 +141,20 @@ const EvaluationResult: React.FC<EvaluationResultProps> = ({ result, onReset }) 
         </h3>
         <div className="space-y-6">
           {result.advice.map((item, idx) => (
-            <div key={idx} className="border border-slate-200 rounded-xl overflow-hidden">
-              <div className="bg-slate-50 p-4 font-bold text-slate-700 border-b border-slate-200">
-                アドバイス {idx + 1}
+            <div key={idx} className="border border-slate-200 rounded-xl overflow-hidden shadow-sm">
+              <div className="bg-slate-50 p-4 font-bold text-slate-700 border-b border-slate-200 flex items-center gap-2">
+                <span className="bg-slate-200 text-slate-600 w-6 h-6 flex items-center justify-center rounded-full text-xs">
+                  {idx + 1}
+                </span>
+                アドバイス
               </div>
-              <div className="p-4 md:p-6">
-                <p className="mb-4 text-slate-800 font-medium">{item.suggestion}</p>
-                <div className="bg-yellow-50 p-4 rounded-lg flex flex-col md:flex-row gap-4 items-start md:items-center">
+              <div className="p-5 md:p-7">
+                <p className="mb-5 text-slate-800 font-medium leading-relaxed whitespace-pre-wrap">
+                  {item.suggestion}
+                </p>
+                <div className="bg-yellow-50 p-5 rounded-lg flex flex-col md:flex-row gap-4 items-start md:items-center">
                   <span className="bg-yellow-200 text-yellow-800 px-3 py-1 rounded-full text-xs font-bold whitespace-nowrap">
-                    例
+                    改作例
                   </span>
                   <p className="text-slate-700 font-serif text-lg">
                     「{item.example}」
