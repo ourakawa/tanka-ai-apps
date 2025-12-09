@@ -1,25 +1,21 @@
-
 export default async function handler(req, res) {
-  // Version: 2.5-Flash-Update-Features
+  // Version: 3.1-Hiragana-Count-DoubleComment
   
-  // 1. CORS設定（どこからでもアクセス許可）
+  // 1. CORS設定
   res.setHeader('Access-Control-Allow-Origin', '*');
   res.setHeader('Access-Control-Allow-Methods', 'POST, OPTIONS');
   res.setHeader('Access-Control-Allow-Headers', 'Content-Type');
 
-  // 2. OPTIONSリクエスト（確認）ならすぐにOKを返す
   if (req.method === 'OPTIONS') {
     res.status(200).end();
     return;
   }
 
-  // 3. POST以外は拒否
   if (req.method !== 'POST') {
     res.status(405).json({ error: 'Method Not Allowed' });
     return;
   }
 
-  // 4. APIキーの確認（Vercelの設定画面から読み込む）
   const apiKey = process.env.API_KEY;
   if (!apiKey) {
     res.status(500).json({ error: 'Server Configuration Error: API_KEY is missing.' });
@@ -27,56 +23,61 @@ export default async function handler(req, res) {
   }
 
   try {
-    // ボディからテキストを取得
     const { text } = req.body || {};
     if (!text) {
       res.status(400).json({ error: 'Text is required.' });
       return;
     }
 
-    // 5. Gemini API (gemini-2.5-flash) を呼び出す
+    // 高速な gemini-2.5-flash を使用
     const model = 'gemini-2.5-flash';
     const url = `https://generativelanguage.googleapis.com/v1beta/models/${model}:generateContent?key=${apiKey}`;
 
-    console.log(`Requesting Gemini Model: ${model}`);
-
     const systemPrompt = `
-あなたは熟練の歌人であり、短歌の指導者です。
-ユーザーから入力された短歌を評価し、必ず【純粋なJSON形式のみ】で出力してください。
-Markdown記法（\`\`\`jsonなど）や挨拶文は一切不要です。
+あなたは熟練の歌人AIです。ユーザーの短歌を評価し、JSON形式のみを返してください。
+Markdown装飾や挨拶は不要です。即座にJSONデータを出力してください。
 
-【重要指示】
-1. **短歌の分解**: 入力された短歌を、初句・二句・三句・四句・結句の5つのパーツに分解し、それぞれの正確な音数（モーラ数）を数えてください。（例：「きゃ」は1音）
-2. **参考作品の選定**: 「sample」セクションには、**必ず実在する有名な近現代短歌（俵万智、穂村弘、寺山修司など）** を引用してください。**AIが創作した架空の短歌は絶対に禁止**です。
+【処理手順】
+1. **読みの特定**: 入力された短歌の漢字を、文脈に合わせて正しい「ひらがな（読み）」に変換してください。
+   - 現代仮名遣いで出力すること。
+2. **音数計算**: その「ひらがな」に基づいて音数（モーラ）を数えてください。
+   - 小さい「ゃ」「ゅ」「ょ」は直前の文字とセットで1音と数える（例：きゃ＝1音）。
+   - 小さい「っ」は1音と数える。長音「ー」は1音と数える。
+   - 字余り・字足らずを厳密に判定してください。
+3. **評価とコメント**: 
+   - 評価コメントは**従来の2倍の分量**で、具体的かつ論理的に記述してください。
+   - 「なぜ良いのか」「どこが惜しいのか」を背景まで踏み込んで解説してください。
+   - 推敲アドバイスも**分量を倍増**させ、修正案の意図を丁寧に説明してください。
+   - 表現は優しく、しかし的確に指導してください。
 
-【JSONの構造】
+【JSON構造】
 {
   "inputAnalysis": [
-    { "part": "初句のテキスト", "syllables": 音数(数値) },
-    { "part": "二句のテキスト", "syllables": 音数(数値) },
-    { "part": "三句のテキスト", "syllables": 音数(数値) },
-    { "part": "四句のテキスト", "syllables": 音数(数値) },
-    { "part": "結句のテキスト", "syllables": 音数(数値) }
+    { "part": "初句(漢字)", "reading": "初句(ひらがな)", "syllables": 数値 },
+    { "part": "二句(漢字)", "reading": "二句(ひらがな)", "syllables": 数値 },
+    { "part": "三句(漢字)", "reading": "三句(ひらがな)", "syllables": 数値 },
+    { "part": "四句(漢字)", "reading": "四句(ひらがな)", "syllables": 数値 },
+    { "part": "結句(漢字)", "reading": "結句(ひらがな)", "syllables": 数値 }
   ],
   "scores": { "rhythm": 0-30, "imagery": 0-30, "originality": 0-40, "total": 0-100 },
   "comments": { 
-     "rhythm": "文字列", 
-     "imagery": "文字列", 
-     "originality": "文字列", 
-     "general": "文字列"
+     "rhythm": "リズムに関する詳細な長文コメント", 
+     "imagery": "表現技法に関する詳細な長文コメント", 
+     "originality": "独創性に関する詳細な長文コメント", 
+     "general": "全体的な長文の総評"
   },
   "advice": [
-    { "suggestion": "文字列", "example": "文字列" },
-    { "suggestion": "文字列", "example": "文字列" }
+    { "suggestion": "具体的な改善提案（長文詳細）", "example": "改作例" },
+    { "suggestion": "具体的な改善提案（長文詳細）", "example": "改作例" }
   ],
   "theme": {
-    "genre": "文字列",
-    "tone": "文字列",
-    "nextTopicRecommendation": "文字列"
+    "genre": "ジャンル",
+    "tone": "トーン",
+    "nextTopicRecommendation": "おすすめテーマ"
   },
   "sample": {
-    "text": "実在する有名な短歌の引用",
-    "author": "その短歌の作者名",
+    "text": "実在する有名な短歌（AI創作禁止）",
+    "author": "作者名",
     "explanation": "解説"
   }
 }`;
@@ -96,14 +97,12 @@ Markdown記法（\`\`\`jsonなど）や挨拶文は一切不要です。
 
     const data = await response.json();
 
-    // Google側のエラーチェック
     if (data.error) {
       console.error("Gemini API Error:", data.error);
       res.status(500).json({ error: data.error.message });
       return;
     }
 
-    // 結果をそのまま返す
     res.status(200).json(data);
 
   } catch (error) {
