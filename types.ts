@@ -31,6 +31,7 @@ export interface SampleTanka {
 
 export interface TankaPhrase {
   part: string;      // 句のテキスト（例：「春の夜の」）
+  reading: string;   // 句の読み（例：「はるのよの」）
   syllables: number; // 音数（例：5）
 }
 
