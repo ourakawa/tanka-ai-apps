@@ -1,5 +1,5 @@
 export default async function handler(req, res) {
-  // Version: 3.2-Stable-Flash-1.5
+  // Version: 5.0-Stable-Model-List
   
   // 1. CORS設定
   res.setHeader('Access-Control-Allow-Origin', '*');
@@ -29,12 +29,27 @@ export default async function handler(req, res) {
       return;
     }
 
-    // ★モデルを安定版の gemini-1.5-flash に変更
-    // 課金有効化されたプロジェクトであれば、レート制限エラーを回避できます。
-    const model = 'gemini-1.5-flash';
-    const url = `https://generativelanguage.googleapis.com/v1beta/models/${model}:generateContent?key=${apiKey}`;
+    // ★総当たりモデルリスト
+    // 具体的なバージョン番号を指定することで「Not Found」を回避します。
+    // Flash系を優先して高速化を図り、だめならPro系、最後に実験版を試します。
+    const modelsToTry = [
+      'gemini-1.5-flash',
+      'gemini-1.5-flash-002',
+      'gemini-1.5-flash-latest',
+      'gemini-1.5-pro',
+      'gemini-1.5-pro-002',
+      'gemini-2.0-flash-exp'
+    ];
 
-    const systemPrompt = `
+    let lastError = null;
+
+    for (const model of modelsToTry) {
+      try {
+        console.log(`Trying model: ${model}...`);
+        
+        const url = `https://generativelanguage.googleapis.com/v1beta/models/${model}:generateContent?key=${apiKey}`;
+
+        const systemPrompt = `
 あなたは熟練の歌人AIです。ユーザーの短歌を評価し、JSON形式のみを返してください。
 Markdown装飾や挨拶は不要です。即座にJSONデータを出力してください。
 
@@ -83,49 +98,51 @@ Markdown装飾や挨拶は不要です。即座にJSONデータを出力して�
   }
 }`;
 
-    const response = await fetch(url, {
-      method: 'POST',
-      headers: { 'Content-Type': 'application/json' },
-      body: JSON.stringify({
-        contents: [{
-          parts: [{ text: systemPrompt + "\n\n入力された短歌:\n" + text }]
-        }],
-        generationConfig: {
-          responseMimeType: "application/json"
-        }
-      })
-    });
+        const response = await fetch(url, {
+          method: 'POST',
+          headers: { 'Content-Type': 'application/json' },
+          body: JSON.stringify({
+            contents: [{
+              parts: [{ text: systemPrompt + "\n\n入力された短歌:\n" + text }]
+            }],
+            generationConfig: {
+              responseMimeType: "application/json"
+            }
+          })
+        });
 
-    // レスポンスのステータスチェック（404などが返ってきていないか）
-    if (!response.ok) {
-      const errorText = await response.text();
-      console.error("Gemini API Error Response:", response.status, errorText);
-      
-      let errorMessage = `AIサーバーエラー (${response.status})`;
-      try {
-        const errorJson = JSON.parse(errorText);
-        if (errorJson.error && errorJson.error.message) {
-          errorMessage = errorJson.error.message;
+        if (!response.ok) {
+          const errorText = await response.text();
+          console.warn(`Model ${model} failed with status ${response.status}: ${errorText}`);
+          lastError = new Error(`Model ${model} error: ${response.status} - ${errorText}`);
+          continue; 
         }
+
+        const data = await response.json();
+
+        if (data.error) {
+          console.warn(`Model ${model} returned API error:`, data.error);
+          lastError = new Error(data.error.message);
+          continue; 
+        }
+
+        // 成功！
+        res.status(200).json(data);
+        return;
+
       } catch (e) {
-        // JSONパースエラー時は生のテキストを使用
+        console.warn(`Model ${model} exception:`, e);
+        lastError = e;
+        continue;
       }
-      res.status(response.status).json({ error: errorMessage });
-      return;
     }
 
-    const data = await response.json();
-
-    if (data.error) {
-      console.error("Gemini API Error:", data.error);
-      res.status(500).json({ error: data.error.message });
-      return;
-    }
-
-    res.status(200).json(data);
+    // 全滅した場合
+    console.error("All models failed. Last error:", lastError);
+    throw lastError || new Error("All models failed.");
 
   } catch (error) {
-    console.error("Server Error:", error);
-    res.status(500).json({ error: 'Internal Server Error' });
+    console.error("Server Error (Final):", error);
+    res.status(500).json({ error: 'AIサーバーへの接続に失敗しました。しばらく待ってから再度お試しください。' });
   }
 }
