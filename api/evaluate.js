@@ -1,6 +1,6 @@
 
-// Version: 1.1.0
-const API_VERSION = '1.1.0';
+// Version: 1.1.1
+const API_VERSION = '1.1.1';
 
 export default async function handler(req, res) {
   // 1. CORS設定
@@ -86,7 +86,7 @@ Markdown装飾や挨拶は不要です。即座にJSONデータを出力して�
 
 【処理手順】
 1. **読みの特定**: 入力された短歌の漢字を、文脈に合わせて正しい「ひらがな（読み）」に変換してください。
-   - 現代仮名遣いで出力すること。
+   - **重要**: "reading"フィールドには漢字を含めず、**すべてひらがな**に展開してください。（例：「頭」→「かしら」、「妻子」→「さいし」）
 2. **音数計算**: その「ひらがな」に基づいて音数（モーラ）を数えてください。
    - 小さい「ゃ」「ゅ」「ょ」は直前の文字とセットで1音と数える（例：きゃ＝1音）。
    - 小さい「っ」は1音と数える。長音「ー」は1音と数える。
@@ -105,11 +105,11 @@ Markdown装飾や挨拶は不要です。即座にJSONデータを出力して�
 【JSON構造】
 {
   "inputAnalysis": [
-    { "part": "初句(漢字)", "reading": "初句(ひらがな)", "syllables": 数値 },
-    { "part": "二句(漢字)", "reading": "二句(ひらがな)", "syllables": 数値 },
-    { "part": "三句(漢字)", "reading": "三句(ひらがな)", "syllables": 数値 },
-    { "part": "四句(漢字)", "reading": "四句(ひらがな)", "syllables": 数値 },
-    { "part": "結句(漢字)", "reading": "結句(ひらがな)", "syllables": 数値 }
+    { "part": "初句のテキスト", "reading": "初句の読み(すべてひらがな)", "syllables": 数値 },
+    { "part": "二句のテキスト", "reading": "二句の読み(すべてひらがな)", "syllables": 数値 },
+    { "part": "三句のテキスト", "reading": "三句の読み(すべてひらがな)", "syllables": 数値 },
+    { "part": "四句のテキスト", "reading": "四句の読み(すべてひらがな)", "syllables": 数値 },
+    { "part": "結句のテキスト", "reading": "結句の読み(すべてひらがな)", "syllables": 数値 }
   ],
   "scores": { "rhythm": 0-30, "imagery": 0-30, "originality": 0-40, "total": 0-100 },
   "comments": { 
