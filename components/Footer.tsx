@@ -2,6 +2,8 @@
 import React from 'react';
 
 const Footer: React.FC = () => {
+  const APP_VERSION = "v1.1.0"; // クライアントバージョン
+
   return (
     <footer className="bg-slate-100 py-8 mt-auto border-t border-slate-200">
       <div className="container mx-auto px-4 text-center text-slate-500 text-sm">
@@ -17,8 +19,8 @@ const Footer: React.FC = () => {
             また、入力されたテキストはAI処理のためにGoogleのサーバーへ送信されますが、
             個人情報の入力はお控えください。
           </p>
-          <div className="mt-4 text-right">
-            <a href="#admin" className="text-slate-300 hover:text-slate-500 transition-colors">Admin</a>
+          <div className="mt-4 text-center text-slate-300 font-mono">
+            Client {APP_VERSION}
           </div>
         </div>
       </div>

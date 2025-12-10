@@ -13,14 +13,22 @@ export interface TankaComments {
   general: string;
 }
 
+export interface TankaPhrase {
+  part: string;      // 句のテキスト（例：「春の夜の」）
+  reading: string;   // 句の読み（例：「はるのよの」）
+  syllables: number; // 音数（例：5）
+}
+
 export interface RevisionAdvice {
   suggestion: string;
   example: string;
+  exampleAnalysis?: TankaPhrase[];
 }
 
 export interface ThemeAnalysis {
   genre: string;
   tone: string;
+  style?: string;
   nextTopicRecommendation: string;
 }
 
@@ -30,12 +38,6 @@ export interface SampleTanka {
   explanation: string;
 }
 
-export interface TankaPhrase {
-  part: string;      // 句のテキスト（例：「春の夜の」）
-  reading: string;   // 句の読み（例：「はるのよの」）
-  syllables: number; // 音数（例：5）
-}
-
 export interface EvaluationResult {
   inputAnalysis: TankaPhrase[]; // 短歌の分解データ（5句分）
   scores: TankaScores;
@@ -43,23 +45,8 @@ export interface EvaluationResult {
   advice: RevisionAdvice[];
   theme: ThemeAnalysis;
   sample: SampleTanka;
-  usedModel?: string; // ★使用されたGeminiモデル名
-}
-
-// ★管理者機能用データ型
-export interface AccessLog {
-  id: string;
-  timestamp: string;
-  ip: string;
-  text: string;     // 投稿された短歌（先頭部分）
-  model: string;    // 使用モデル
-  status: 'SUCCESS' | 'BLOCKED' | 'ERROR';
-  appVersion: string;
-}
-
-export interface AdminData {
-  logs: AccessLog[];
-  ngWords: string[];
+  usedModel?: string; // 使用されたGeminiモデル名
+  apiVersion?: string; // ★APIバージョン
 }
 
 export enum AppState {
@@ -67,5 +54,20 @@ export enum AppState {
   ANALYZING = 'ANALYZING',
   RESULT = 'RESULT',
   ERROR = 'ERROR',
-  ADMIN = 'ADMIN' // ★管理画面状態を追加
+  ADMIN = 'ADMIN'
+}
+
+export interface AccessLog {
+  id: string | number;
+  timestamp: string | number;
+  appVersion: string;
+  status: string;
+  model: string;
+  text: string;
+  ip: string;
+}
+
+export interface AdminData {
+  ngWords: string[];
+  logs: AccessLog[];
 }

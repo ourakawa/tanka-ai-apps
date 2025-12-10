@@ -1,59 +1,15 @@
 
-// Version: 8.0-Admin-Logs-NGWords
-// ★簡易メモリデータベース（注意：サーバー再起動でリセットされます）
-// 本格運用時は外部DB（Supabase等）への移行を推奨
-let MEMORY_DB = {
-  logs: [],       // アクセスログ（最大30件）
-  ngWords: ['死ね', '殺す', '馬鹿', 'アホ', '犯罪', '爆破'], // デフォルトNGワード
-  appVersion: 'v1.0.0'
-};
+// Version: 1.1.0
+const API_VERSION = '1.1.0';
 
 export default async function handler(req, res) {
   // 1. CORS設定
   res.setHeader('Access-Control-Allow-Origin', '*');
-  res.setHeader('Access-Control-Allow-Methods', 'POST, GET, PUT, OPTIONS'); // GET/PUT追加
-  res.setHeader('Access-Control-Allow-Headers', 'Content-Type, x-admin-password'); // パスワードヘッダー許可
+  res.setHeader('Access-Control-Allow-Methods', 'POST, OPTIONS');
+  res.setHeader('Access-Control-Allow-Headers', 'Content-Type');
 
   if (req.method === 'OPTIONS') {
     res.status(200).end();
-    return;
-  }
-
-  // ★管理者用パスワード（本番環境では環境変数で管理推奨）
-  const ADMIN_PASSWORD = process.env.ADMIN_PASSWORD || 'admin123';
-
-  // ==========================================
-  // 【管理者機能】データ取得 (GET)
-  // ==========================================
-  if (req.method === 'GET') {
-    const password = req.headers['x-admin-password'];
-    if (password !== ADMIN_PASSWORD) {
-      res.status(401).json({ error: 'Unauthorized' });
-      return;
-    }
-    res.status(200).json({
-      logs: MEMORY_DB.logs,
-      ngWords: MEMORY_DB.ngWords
-    });
-    return;
-  }
-
-  // ==========================================
-  // 【管理者機能】設定更新 (PUT)
-  // ==========================================
-  if (req.method === 'PUT') {
-    const password = req.headers['x-admin-password'];
-    if (password !== ADMIN_PASSWORD) {
-      res.status(401).json({ error: 'Unauthorized' });
-      return;
-    }
-    const { ngWords } = req.body;
-    if (Array.isArray(ngWords)) {
-      MEMORY_DB.ngWords = ngWords;
-      res.status(200).json({ message: 'Settings updated', ngWords: MEMORY_DB.ngWords });
-    } else {
-      res.status(400).json({ error: 'Invalid data format' });
-    }
     return;
   }
 
@@ -68,38 +24,33 @@ export default async function handler(req, res) {
     return;
   }
 
-  // ログ記録用ヘルパー関数
-  const addLog = (text, status, model = '-') => {
-    const ip = req.headers['x-forwarded-for'] || req.connection.remoteAddress || 'unknown';
-    const log = {
-      id: Date.now().toString(),
-      timestamp: new Date().toISOString(),
-      ip: ip.split(',')[0], // 最初のIPを採用
-      text: text.substring(0, 50) + (text.length > 50 ? '...' : ''), // 長すぎる場合はカット
-      model: model,
-      status: status,
-      appVersion: MEMORY_DB.appVersion
-    };
-    
-    // 先頭に追加（新しい順）
-    MEMORY_DB.logs.unshift(log);
-    
-    // 30件制限
-    if (MEMORY_DB.logs.length > 30) {
-      MEMORY_DB.logs.pop();
-    }
-  };
+  // ★名歌データベース（ハルシネーション防止）
+  const REFERENCE_TANKA_DB = [
+    { id: 1, text: "東海の小島の磯の白砂にわれ泣きぬれて蟹とたはむる", author: "石川啄木", explanation: "故郷を離れた孤独と、自然の中での無垢な心が詠まれています。砂浜の白と海の青の対比が鮮やかです。" },
+    { id: 2, text: "その子二十櫛にながるる黒髪のおごりの春のうつくしきかな", author: "与謝野晶子", explanation: "青春の生命力と自らの美しさへの自信が、流れる黒髪の描写を通して高らかに歌い上げられています。" },
+    { id: 3, text: "観覧車回れよ回れ想ひ出は君には一日我には一生", author: "栗木京子", explanation: "同じ時間を共有していても、相手と自分とでその重みが異なる切なさを、回転する観覧車に託しています。" },
+    { id: 4, text: "「嫁さんになれよ」だなんてカンタンに言わないでよと笑っちゃうけど", author: "俵万智", explanation: "口語体を活かした軽やかなリズムの中に、プロポーズされた瞬間の照れと喜びが素直に表現されています。" },
+    { id: 5, text: "白鳥は哀しからずや空の青海のあをにも染まずただよふ", author: "若山牧水", explanation: "周囲の青さに染まることなく孤独に漂う白鳥に、作者自身の孤独な魂を重ね合わせています。" },
+    { id: 6, text: "春の夜の夢ばかりなる手枕にかひなく立たむ名こそ惜しけれ", author: "周防内侍", explanation: "平安時代の恋の駆け引きを詠んだ歌ですが、一瞬の夢のような出来事に身を委ねることの危うさを説いています。" },
+    { id: 7, text: "不来方のお城の草に寝ころびて空に吸はれし十五の心", author: "石川啄木", explanation: "青春時代の無垢で吸収性の高い心が、広い空に溶け込んでいくような感覚を瑞々しく描いています。" },
+    { id: 8, text: "たのしみは妻子むつまじくうちつどひ頭ならべて物をくふ時", author: "橘曙覧", explanation: "「独楽吟」の中の一首。日常のささやかな幸せこそが人生の楽しみであるという実感が込められています。" },
+    { id: 9, text: "死にたくてならぬ時あり箸持てば大根のあたまの欠けてゐるにも", author: "斎藤茂吉", explanation: "日常の些細な欠損（大根の欠け）から、ふと死にたいほどの虚無感や寂しさが誘発される心理を鋭く捉えています。" },
+    { id: 10, text: "くれなゐの二尺伸びたる薔薇の芽の針やはらかに春雨のふる", author: "正岡子規", explanation: "病床から眺める庭の景色。薔薇の芽の赤さと柔らかい針、そして春雨の静けさが、生命の息吹を感じさせます。" }
+  ];
 
   // ★音数（モーラ）計算関数
   function calculateMoraCount(text) {
     if (!text) return 0;
+    // ひらがな・カタカナ・ー 以外を削除（念のため）
     const cleanText = text.replace(/[^ぁ-んァ-ンー]/g, '');
     let count = 0;
     const smallChars = ['ゃ', 'ゅ', 'ょ', 'ぁ', 'ぃ', 'ぅ', 'ぇ', 'ぉ', 'ャ', 'ュ', 'ョ', 'ァ', 'ィ', 'ゥ', 'ェ', 'ォ'];
     for (const char of cleanText) {
+      // 小さい文字以外を1音としてカウント
       if (!smallChars.includes(char)) {
         count++;
       }
+      // ※「っ」「ー」は小さい文字リストに含まれていないのでカウントされる（正しい）
     }
     return count;
   }
@@ -111,16 +62,7 @@ export default async function handler(req, res) {
       return;
     }
 
-    // ★NGワードチェック
-    for (const ngWord of MEMORY_DB.ngWords) {
-      if (text.includes(ngWord)) {
-        addLog(text, 'BLOCKED');
-        res.status(400).json({ error: '不適切な表現が含まれているため、評価できません。' });
-        return;
-      }
-    }
-
-    // ★総当たりモデルリスト（最新モデル優先）
+    // 総当たりモデルリスト（最新モデル優先）
     const modelsToTry = [
       'gemini-2.0-flash-exp',
       'gemini-1.5-pro-002',
@@ -156,7 +98,9 @@ Markdown装飾や挨拶は不要です。即座にJSONデータを出力して�
    - 表現は優しく、しかし的確に指導してください。
 4. **推敲案の作成**:
    - アドバイスに基づく改作例も作成し、それについても入力短歌と同様に「読み」と「音数計算」を行ってください。
-   - ただしJSON構造上はテキストのみを返しますが、内部でリズムを確認してください。
+5. **参考歌の選択**:
+   - 創作は禁止です。以下のリストから、ユーザーの歌のテーマ（ジャンル・トーン）に最も近い一首を選び、その【ID番号のみ】を出力JSONの "sampleId" フィールドに設定してください。
+   - リスト: ${JSON.stringify(REFERENCE_TANKA_DB.map(t => ({ id: t.id, text: t.text })))}
 
 【JSON構造】
 {
@@ -175,8 +119,17 @@ Markdown装飾や挨拶は不要です。即座にJSONデータを出力して�
      "general": "全体的な長文の総評"
   },
   "advice": [
-    { "suggestion": "具体的な改善提案（長文詳細）", "example": "改作例" },
-    { "suggestion": "具体的な改善提案（長文詳細）", "example": "改作例" }
+    { 
+      "suggestion": "具体的な改善提案（長文詳細）", 
+      "example": "改作例",
+      "exampleAnalysis": [
+          { "part": "初句", "reading": "ひらがな", "syllables": 数値 },
+          { "part": "二句", "reading": "ひらがな", "syllables": 数値 },
+          { "part": "三句", "reading": "ひらがな", "syllables": 数値 },
+          { "part": "四句", "reading": "ひらがな", "syllables": 数値 },
+          { "part": "結句", "reading": "ひらがな", "syllables": 数値 }
+      ]
+    }
   ],
   "theme": {
     "genre": "ジャンル",
@@ -184,11 +137,7 @@ Markdown装飾や挨拶は不要です。即座にJSONデータを出力して�
     "style": "文体（口語/文語）",
     "nextTopicRecommendation": "おすすめテーマ"
   },
-  "sample": {
-    "text": "実在する有名な短歌（AI創作禁止）",
-    "author": "作者名",
-    "explanation": "解説"
-  }
+  "sampleId": 数値
 }`;
 
         const response = await fetch(url, {
@@ -221,6 +170,8 @@ Markdown装飾や挨拶は不要です。即座にJSONデータを出力して�
 
         // 成功！
         data.usedModel = model;
+        // ★APIバージョンを付与
+        data.apiVersion = API_VERSION;
         usedModelName = model;
         
         // ★★★ データ補正処理 ★★★
@@ -230,20 +181,46 @@ Markdown装飾や挨拶は不要です。即座にJSONデータを出力して�
                 let cleanText = rawText.trim().replace(/^```json/, '').replace(/^```/, '').replace(/```$/, '');
                 const parsedResult = JSON.parse(cleanText);
 
+                // 1. ユーザー短歌の音数再計算
                 if (parsedResult.inputAnalysis && Array.isArray(parsedResult.inputAnalysis)) {
                     parsedResult.inputAnalysis = parsedResult.inputAnalysis.map(phrase => {
                         const correctCount = calculateMoraCount(phrase.reading);
                         return { ...phrase, syllables: correctCount };
                     });
-                    data.candidates[0].content.parts[0].text = JSON.stringify(parsedResult);
                 }
+
+                // 2. 推敲案の音数再計算
+                if (parsedResult.advice && Array.isArray(parsedResult.advice)) {
+                    parsedResult.advice = parsedResult.advice.map(item => {
+                        if (item.exampleAnalysis && Array.isArray(item.exampleAnalysis)) {
+                            item.exampleAnalysis = item.exampleAnalysis.map(phrase => {
+                                const correctCount = calculateMoraCount(phrase.reading);
+                                return { ...phrase, syllables: correctCount };
+                            });
+                        }
+                        return item;
+                    });
+                }
+
+                // 3. 参考歌の注入（ハルシネーション対策）
+                const sampleId = parsedResult.sampleId || 1;
+                // IDが範囲外ならランダムに選ぶ
+                const safeId = (sampleId > 0 && sampleId <= REFERENCE_TANKA_DB.length) 
+                    ? sampleId 
+                    : Math.floor(Math.random() * REFERENCE_TANKA_DB.length) + 1;
+                
+                const selectedTanka = REFERENCE_TANKA_DB.find(t => t.id === safeId);
+                parsedResult.sample = {
+                    text: selectedTanka.text,
+                    author: selectedTanka.author,
+                    explanation: selectedTanka.explanation
+                };
+
+                data.candidates[0].content.parts[0].text = JSON.stringify(parsedResult);
             }
         } catch (e) {
             console.error("Auto-correction failed:", e);
         }
-
-        // ★ログ記録（成功）
-        addLog(text, 'SUCCESS', usedModelName);
 
         res.status(200).json(data);
         return;
@@ -257,8 +234,6 @@ Markdown装飾や挨拶は不要です。即座にJSONデータを出力して�
 
     // 全滅した場合
     console.error("All models failed. Last error:", lastError);
-    // ★ログ記録（エラー）
-    addLog(text, 'ERROR', '-');
     throw lastError || new Error("All models failed.");
 
   } catch (error) {

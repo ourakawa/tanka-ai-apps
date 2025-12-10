@@ -39,7 +39,7 @@ const EvaluationResult: React.FC<EvaluationResultProps> = ({ result, onReset }) 
           <div className="flex flex-wrap justify-center items-start gap-3 md:gap-6">
             {result.inputAnalysis && result.inputAnalysis.map((phrase, idx) => (
               <div key={idx} className="flex flex-col items-center p-3 bg-slate-50 rounded-lg border border-slate-100 min-w-[4rem]">
-                {/* Reading (Hiragana) - NEW FEATURE */}
+                {/* Reading (Hiragana) */}
                 <span className="text-xs text-indigo-500 mb-1 font-bold tracking-wider">
                   {phrase.reading}
                 </span>
@@ -153,13 +153,36 @@ const EvaluationResult: React.FC<EvaluationResultProps> = ({ result, onReset }) 
                 <p className="mb-5 text-slate-800 font-medium leading-relaxed whitespace-pre-wrap">
                   {item.suggestion}
                 </p>
-                <div className="bg-yellow-50 p-5 rounded-lg flex flex-col md:flex-row gap-4 items-start md:items-center">
-                  <span className="bg-yellow-200 text-yellow-800 px-3 py-1 rounded-full text-xs font-bold whitespace-nowrap">
-                    改作例
-                  </span>
-                  <p className="text-slate-700 font-serif text-lg">
-                    「{item.example}」
-                  </p>
+                
+                {/* Improved Example Display with Syllable Analysis */}
+                <div className="bg-yellow-50 p-5 rounded-lg border border-yellow-100">
+                  <div className="flex flex-col md:flex-row gap-4 items-start md:items-center mb-4">
+                    <span className="bg-yellow-200 text-yellow-800 px-3 py-1 rounded-full text-xs font-bold whitespace-nowrap">
+                      改作例
+                    </span>
+                    <p className="text-slate-700 font-serif text-lg font-bold">
+                      「{item.example}」
+                    </p>
+                  </div>
+                  
+                  {/* Example Analysis Visualization */}
+                  {item.exampleAnalysis && (
+                    <div className="flex flex-wrap justify-start items-start gap-2 mt-2">
+                      {item.exampleAnalysis.map((phrase, pIdx) => (
+                        <div key={pIdx} className="flex flex-col items-center p-2 bg-white rounded border border-yellow-200 min-w-[3rem]">
+                          <span className="text-[10px] text-slate-500 mb-0.5">{phrase.reading}</span>
+                          <span className={`
+                            px-2 py-0.5 rounded-full text-[10px] font-bold
+                            ${(pIdx === 0 || pIdx === 2) && phrase.syllables === 5 ? 'bg-emerald-100 text-emerald-700' : ''}
+                            ${(pIdx === 1 || pIdx === 3 || pIdx === 4) && phrase.syllables === 7 ? 'bg-emerald-100 text-emerald-700' : ''}
+                            ${!((pIdx === 0 || pIdx === 2) && phrase.syllables === 5) && !((pIdx === 1 || pIdx === 3 || pIdx === 4) && phrase.syllables === 7) ? 'bg-amber-100 text-amber-700' : ''}
+                          `}>
+                            {phrase.syllables}音
+                          </span>
+                        </div>
+                      ))}
+                    </div>
+                  )}
                 </div>
               </div>
             </div>
@@ -185,6 +208,15 @@ const EvaluationResult: React.FC<EvaluationResultProps> = ({ result, onReset }) 
               <span className="text-xs text-slate-400 block mb-1">作品のトーン</span>
               <p className="text-slate-700">{result.theme.tone}</p>
             </div>
+             {/* New Style Analysis */}
+             {result.theme.style && (
+              <div>
+                <span className="text-xs text-slate-400 block mb-1">文体</span>
+                <span className="inline-block bg-slate-100 text-slate-600 px-3 py-0.5 rounded-sm text-sm">
+                  {result.theme.style}
+                </span>
+              </div>
+            )}
             <div className="pt-4 border-t border-slate-100">
               <span className="text-xs text-slate-400 block mb-1">次におすすめのテーマ</span>
               <p className="text-indigo-600 font-bold">{result.theme.nextTopicRecommendation}</p>
@@ -211,11 +243,11 @@ const EvaluationResult: React.FC<EvaluationResultProps> = ({ result, onReset }) 
         </section>
       </div>
 
-      {/* Model Display & Retry Button */}
-      <div className="text-center mt-8 space-y-4">
+      {/* Model & Version Display */}
+      <div className="text-center mt-8 space-y-2">
         {result.usedModel && (
           <div className="text-xs text-slate-300 font-mono">
-            Generation Model: {result.usedModel}
+            Model: {result.usedModel} {result.apiVersion && `/ API: ${result.apiVersion}`}
           </div>
         )}
         <button
