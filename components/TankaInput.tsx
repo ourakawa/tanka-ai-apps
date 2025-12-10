@@ -8,13 +8,23 @@ interface TankaInputProps {
 
 const TankaInput: React.FC<TankaInputProps> = ({ onAnalyze, isLoading }) => {
   const [text, setText] = useState('');
+  const MAX_CHARS = 50;
 
   const handleSubmit = (e: React.FormEvent) => {
     e.preventDefault();
+    
+    // 文字数制限チェック
+    if (text.length > MAX_CHARS) {
+      alert("ご利用ありがとうございます。\n文字数は50文字以内にしてください");
+      return;
+    }
+
     if (text.trim().length > 0) {
       onAnalyze(text);
     }
   };
+
+  const isOverLimit = text.length > MAX_CHARS;
 
   return (
     <div className="w-full max-w-2xl mx-auto bg-white p-6 md:p-8 rounded-xl shadow-lg border border-slate-200">
@@ -28,12 +38,17 @@ const TankaInput: React.FC<TankaInputProps> = ({ onAnalyze, isLoading }) => {
             value={text}
             onChange={(e) => setText(e.target.value)}
             placeholder={'例：\n春の夜の夢ばかりなる手枕に\nかひなく立たむ名こそ惜しけれ'}
-            className="w-full h-48 p-4 text-lg md:text-xl border-2 border-slate-300 rounded-lg focus:border-indigo-500 focus:ring-2 focus:ring-indigo-200 focus:outline-none resize-none font-serif leading-loose placeholder-slate-300 text-slate-800 transition-all"
+            className={`w-full h-48 p-4 text-lg md:text-xl border-2 rounded-lg focus:outline-none resize-none font-serif leading-loose placeholder-slate-300 text-slate-800 transition-all
+              ${isOverLimit 
+                ? 'border-red-400 focus:border-red-500 focus:ring-2 focus:ring-red-200' 
+                : 'border-slate-300 focus:border-indigo-500 focus:ring-2 focus:ring-indigo-200'
+              }
+            `}
             disabled={isLoading}
             aria-label="短歌入力欄"
           />
-          <div className="absolute bottom-4 right-4 text-slate-400 text-sm">
-            {text.length} 文字
+          <div className={`absolute bottom-4 right-4 text-sm font-bold ${isOverLimit ? 'text-red-500' : 'text-slate-400'}`}>
+            {text.length} / {MAX_CHARS} 文字
           </div>
         </div>
 
