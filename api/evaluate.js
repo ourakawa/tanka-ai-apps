@@ -1,5 +1,5 @@
 export default async function handler(req, res) {
-  // Version: 6.0-Latest-Models-Priority
+  // Version: 7.0-Mora-Correction-Logic
   
   // 1. CORS設定
   res.setHeader('Access-Control-Allow-Origin', '*');
@@ -22,6 +22,27 @@ export default async function handler(req, res) {
     return;
   }
 
+  // ★音数（モーラ）計算関数
+  // AIの計算ミスをプログラム側で強制補正するためのロジック
+  function calculateMoraCount(text) {
+    if (!text) return 0;
+    // ひらがな・カタカナ以外（空白など）を除去して詰める
+    const cleanText = text.replace(/[^ぁ-んァ-ンー]/g, '');
+    
+    let count = 0;
+    // 小さい文字（拗音など）のリスト。これらは直前の文字とセットで1音とするため、単独ではカウントしない（ループでスキップする仕組みにするか、総数から引く）
+    // ここでは「文字数 - 小さい文字の数」で計算する
+    const smallChars = ['ゃ', 'ゅ', 'ょ', 'ぁ', 'ぃ', 'ぅ', 'ぇ', 'ぉ', 'ャ', 'ュ', 'ョ', 'ァ', 'ィ', 'ゥ', 'ェ', 'ォ'];
+    
+    for (const char of cleanText) {
+      if (!smallChars.includes(char)) {
+        count++;
+      }
+    }
+    // ※「っ」「ー」はsmallCharsに含まれていないため、1音としてカウントされる（正しい挙動）
+    return count;
+  }
+
   try {
     const { text } = req.body || {};
     if (!text) {
@@ -30,8 +51,6 @@ export default async function handler(req, res) {
     }
 
     // ★総当たりモデルリスト（最新モデル優先）
-    // ユーザーの要望「できるだけ最新のモデル」に基づき、2.0系や1.5 Pro最新版を優先します。
-    // エラーが出た場合は、下の安定版へ自動的にフォールバックします。
     const modelsToTry = [
       'gemini-2.0-flash-exp',    // 最新世代
       'gemini-1.5-pro-002',      // 1.5世代の最高性能(最新)
@@ -128,6 +147,35 @@ Markdown装飾や挨拶は不要です。即座にJSONデータを出力して�
         // 成功！
         data.usedModel = model;
         
+        // ★★★ データ補正処理 ★★★
+        // AIのJSONレスポンス内の content.parts[0].text をパースし、
+        // 音数（syllables）をプログラム側で再計算して上書きする
+        try {
+            const rawText = data.candidates?.[0]?.content?.parts?.[0]?.text;
+            if (rawText) {
+                let cleanText = rawText.trim().replace(/^```json/, '').replace(/^```/, '').replace(/```$/, '');
+                const parsedResult = JSON.parse(cleanText);
+
+                if (parsedResult.inputAnalysis && Array.isArray(parsedResult.inputAnalysis)) {
+                    // ここで再計算実行
+                    parsedResult.inputAnalysis = parsedResult.inputAnalysis.map(phrase => {
+                        const correctCount = calculateMoraCount(phrase.reading);
+                        return {
+                            ...phrase,
+                            syllables: correctCount // AIの値を無視して、正しい計算値で上書き
+                        };
+                    });
+                    
+                    // 修正したJSONをテキストに戻してレスポンス構造に書き戻す
+                    // （クライアント側はこれをパースして使うため）
+                    data.candidates[0].content.parts[0].text = JSON.stringify(parsedResult);
+                }
+            }
+        } catch (e) {
+            console.error("Auto-correction failed:", e);
+            // 補正に失敗しても、元のAIデータをそのまま返す（エラーにはしない）
+        }
+
         res.status(200).json(data);
         return;
 
