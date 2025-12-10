@@ -46,9 +46,26 @@ export interface EvaluationResult {
   usedModel?: string; // ★使用されたGeminiモデル名
 }
 
+// ★管理者機能用データ型
+export interface AccessLog {
+  id: string;
+  timestamp: string;
+  ip: string;
+  text: string;     // 投稿された短歌（先頭部分）
+  model: string;    // 使用モデル
+  status: 'SUCCESS' | 'BLOCKED' | 'ERROR';
+  appVersion: string;
+}
+
+export interface AdminData {
+  logs: AccessLog[];
+  ngWords: string[];
+}
+
 export enum AppState {
   IDLE = 'IDLE',
   ANALYZING = 'ANALYZING',
   RESULT = 'RESULT',
-  ERROR = 'ERROR'
+  ERROR = 'ERROR',
+  ADMIN = 'ADMIN' // ★管理画面状態を追加
 }

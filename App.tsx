@@ -1,10 +1,12 @@
-import React, { useState, useCallback } from 'react';
+
+import React, { useState, useCallback, useEffect } from 'react';
 import Header from './components/Header';
 import Footer from './components/Footer';
 import TankaInput from './components/TankaInput';
 import LoadingScreen from './components/LoadingScreen';
 import EvaluationResult from './components/EvaluationResult';
 import AboutModal from './components/AboutModal';
+import AdminDashboard from './components/AdminDashboard'; // ★追加
 import { evaluateTanka } from './services/geminiService';
 import { AppState, EvaluationResult as EvaluationResultType } from './types';
 
@@ -13,6 +15,21 @@ const App: React.FC = () => {
   const [result, setResult] = useState<EvaluationResultType | null>(null);
   const [errorMsg, setErrorMsg] = useState<string | null>(null);
   const [isAboutOpen, setIsAboutOpen] = useState(false);
+
+  // URLハッシュチェック（#adminで管理画面へ）
+  useEffect(() => {
+    const handleHashChange = () => {
+      if (window.location.hash === '#admin') {
+        setAppState(AppState.ADMIN);
+      } else if (appState === AppState.ADMIN) {
+        setAppState(AppState.IDLE);
+      }
+    };
+    window.addEventListener('hashchange', handleHashChange);
+    // 初期チェック
+    handleHashChange();
+    return () => window.removeEventListener('hashchange', handleHashChange);
+  }, [appState]);
 
   const handleAnalyze = useCallback(async (text: string) => {
     setAppState(AppState.ANALYZING);
@@ -36,6 +53,26 @@ const App: React.FC = () => {
     setResult(null);
     setErrorMsg(null);
   }, []);
+
+  // ★管理画面から戻る
+  const handleAdminBack = () => {
+    window.location.hash = '';
+    setAppState(AppState.IDLE);
+  };
+
+  // ★管理画面モード
+  if (appState === AppState.ADMIN) {
+    return (
+      <div className="min-h-screen flex flex-col bg-slate-100 text-slate-800">
+        <header className="bg-slate-900 text-white py-4 px-6 shadow-md">
+           <h1 className="font-bold text-xl">短歌AI 管理システム</h1>
+        </header>
+        <main className="flex-grow container mx-auto px-4 py-8">
+           <AdminDashboard onBack={handleAdminBack} />
+        </main>
+      </div>
+    );
+  }
 
   return (
     <div className="min-h-screen flex flex-col bg-[#fdfcf8] text-slate-800">

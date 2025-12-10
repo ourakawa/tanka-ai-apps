@@ -1,13 +1,59 @@
+
+// Version: 8.0-Admin-Logs-NGWords
+// ★簡易メモリデータベース（注意：サーバー再起動でリセットされます）
+// 本格運用時は外部DB（Supabase等）への移行を推奨
+let MEMORY_DB = {
+  logs: [],       // アクセスログ（最大30件）
+  ngWords: ['死ね', '殺す', '馬鹿', 'アホ', '犯罪', '爆破'], // デフォルトNGワード
+  appVersion: 'v1.0.0'
+};
+
 export default async function handler(req, res) {
-  // Version: 7.0-Mora-Correction-Logic
-  
   // 1. CORS設定
   res.setHeader('Access-Control-Allow-Origin', '*');
-  res.setHeader('Access-Control-Allow-Methods', 'POST, OPTIONS');
-  res.setHeader('Access-Control-Allow-Headers', 'Content-Type');
+  res.setHeader('Access-Control-Allow-Methods', 'POST, GET, PUT, OPTIONS'); // GET/PUT追加
+  res.setHeader('Access-Control-Allow-Headers', 'Content-Type, x-admin-password'); // パスワードヘッダー許可
 
   if (req.method === 'OPTIONS') {
     res.status(200).end();
+    return;
+  }
+
+  // ★管理者用パスワード（本番環境では環境変数で管理推奨）
+  const ADMIN_PASSWORD = process.env.ADMIN_PASSWORD || 'admin123';
+
+  // ==========================================
+  // 【管理者機能】データ取得 (GET)
+  // ==========================================
+  if (req.method === 'GET') {
+    const password = req.headers['x-admin-password'];
+    if (password !== ADMIN_PASSWORD) {
+      res.status(401).json({ error: 'Unauthorized' });
+      return;
+    }
+    res.status(200).json({
+      logs: MEMORY_DB.logs,
+      ngWords: MEMORY_DB.ngWords
+    });
+    return;
+  }
+
+  // ==========================================
+  // 【管理者機能】設定更新 (PUT)
+  // ==========================================
+  if (req.method === 'PUT') {
+    const password = req.headers['x-admin-password'];
+    if (password !== ADMIN_PASSWORD) {
+      res.status(401).json({ error: 'Unauthorized' });
+      return;
+    }
+    const { ngWords } = req.body;
+    if (Array.isArray(ngWords)) {
+      MEMORY_DB.ngWords = ngWords;
+      res.status(200).json({ message: 'Settings updated', ngWords: MEMORY_DB.ngWords });
+    } else {
+      res.status(400).json({ error: 'Invalid data format' });
+    }
     return;
   }
 
@@ -22,24 +68,39 @@ export default async function handler(req, res) {
     return;
   }
 
+  // ログ記録用ヘルパー関数
+  const addLog = (text, status, model = '-') => {
+    const ip = req.headers['x-forwarded-for'] || req.connection.remoteAddress || 'unknown';
+    const log = {
+      id: Date.now().toString(),
+      timestamp: new Date().toISOString(),
+      ip: ip.split(',')[0], // 最初のIPを採用
+      text: text.substring(0, 50) + (text.length > 50 ? '...' : ''), // 長すぎる場合はカット
+      model: model,
+      status: status,
+      appVersion: MEMORY_DB.appVersion
+    };
+    
+    // 先頭に追加（新しい順）
+    MEMORY_DB.logs.unshift(log);
+    
+    // 30件制限
+    if (MEMORY_DB.logs.length > 30) {
+      MEMORY_DB.logs.pop();
+    }
+  };
+
   // ★音数（モーラ）計算関数
-  // AIの計算ミスをプログラム側で強制補正するためのロジック
   function calculateMoraCount(text) {
     if (!text) return 0;
-    // ひらがな・カタカナ以外（空白など）を除去して詰める
     const cleanText = text.replace(/[^ぁ-んァ-ンー]/g, '');
-    
     let count = 0;
-    // 小さい文字（拗音など）のリスト。これらは直前の文字とセットで1音とするため、単独ではカウントしない（ループでスキップする仕組みにするか、総数から引く）
-    // ここでは「文字数 - 小さい文字の数」で計算する
     const smallChars = ['ゃ', 'ゅ', 'ょ', 'ぁ', 'ぃ', 'ぅ', 'ぇ', 'ぉ', 'ャ', 'ュ', 'ョ', 'ァ', 'ィ', 'ゥ', 'ェ', 'ォ'];
-    
     for (const char of cleanText) {
       if (!smallChars.includes(char)) {
         count++;
       }
     }
-    // ※「っ」「ー」はsmallCharsに含まれていないため、1音としてカウントされる（正しい挙動）
     return count;
   }
 
@@ -50,16 +111,26 @@ export default async function handler(req, res) {
       return;
     }
 
+    // ★NGワードチェック
+    for (const ngWord of MEMORY_DB.ngWords) {
+      if (text.includes(ngWord)) {
+        addLog(text, 'BLOCKED');
+        res.status(400).json({ error: '不適切な表現が含まれているため、評価できません。' });
+        return;
+      }
+    }
+
     // ★総当たりモデルリスト（最新モデル優先）
     const modelsToTry = [
-      'gemini-2.0-flash-exp',    // 最新世代
-      'gemini-1.5-pro-002',      // 1.5世代の最高性能(最新)
-      'gemini-1.5-pro',          // 1.5世代の最高性能(安定)
-      'gemini-1.5-flash-002',    // 1.5世代の高速版(最新)
-      'gemini-1.5-flash'         // 最後の砦(最も安定)
+      'gemini-2.0-flash-exp',
+      'gemini-1.5-pro-002',
+      'gemini-1.5-pro',
+      'gemini-1.5-flash-002',
+      'gemini-1.5-flash'
     ];
 
     let lastError = null;
+    let usedModelName = 'unknown';
 
     for (const model of modelsToTry) {
       try {
@@ -83,6 +154,9 @@ Markdown装飾や挨拶は不要です。即座にJSONデータを出力して�
    - 「なぜ良いのか」「どこが惜しいのか」を背景まで踏み込んで解説してください。
    - 推敲アドバイスも**分量を倍増**させ、修正案の意図を丁寧に説明してください。
    - 表現は優しく、しかし的確に指導してください。
+4. **推敲案の作成**:
+   - アドバイスに基づく改作例も作成し、それについても入力短歌と同様に「読み」と「音数計算」を行ってください。
+   - ただしJSON構造上はテキストのみを返しますが、内部でリズムを確認してください。
 
 【JSON構造】
 {
@@ -107,6 +181,7 @@ Markdown装飾や挨拶は不要です。即座にJSONデータを出力して�
   "theme": {
     "genre": "ジャンル",
     "tone": "トーン",
+    "style": "文体（口語/文語）",
     "nextTopicRecommendation": "おすすめテーマ"
   },
   "sample": {
@@ -146,10 +221,9 @@ Markdown装飾や挨拶は不要です。即座にJSONデータを出力して�
 
         // 成功！
         data.usedModel = model;
+        usedModelName = model;
         
         // ★★★ データ補正処理 ★★★
-        // AIのJSONレスポンス内の content.parts[0].text をパースし、
-        // 音数（syllables）をプログラム側で再計算して上書きする
         try {
             const rawText = data.candidates?.[0]?.content?.parts?.[0]?.text;
             if (rawText) {
@@ -157,24 +231,19 @@ Markdown装飾や挨拶は不要です。即座にJSONデータを出力して�
                 const parsedResult = JSON.parse(cleanText);
 
                 if (parsedResult.inputAnalysis && Array.isArray(parsedResult.inputAnalysis)) {
-                    // ここで再計算実行
                     parsedResult.inputAnalysis = parsedResult.inputAnalysis.map(phrase => {
                         const correctCount = calculateMoraCount(phrase.reading);
-                        return {
-                            ...phrase,
-                            syllables: correctCount // AIの値を無視して、正しい計算値で上書き
-                        };
+                        return { ...phrase, syllables: correctCount };
                     });
-                    
-                    // 修正したJSONをテキストに戻してレスポンス構造に書き戻す
-                    // （クライアント側はこれをパースして使うため）
                     data.candidates[0].content.parts[0].text = JSON.stringify(parsedResult);
                 }
             }
         } catch (e) {
             console.error("Auto-correction failed:", e);
-            // 補正に失敗しても、元のAIデータをそのまま返す（エラーにはしない）
         }
+
+        // ★ログ記録（成功）
+        addLog(text, 'SUCCESS', usedModelName);
 
         res.status(200).json(data);
         return;
@@ -188,6 +257,8 @@ Markdown装飾や挨拶は不要です。即座にJSONデータを出力して�
 
     // 全滅した場合
     console.error("All models failed. Last error:", lastError);
+    // ★ログ記録（エラー）
+    addLog(text, 'ERROR', '-');
     throw lastError || new Error("All models failed.");
 
   } catch (error) {

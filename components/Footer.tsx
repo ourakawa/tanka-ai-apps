@@ -1,3 +1,4 @@
+
 import React from 'react';
 
 const Footer: React.FC = () => {
@@ -16,6 +17,9 @@ const Footer: React.FC = () => {
             また、入力されたテキストはAI処理のためにGoogleのサーバーへ送信されますが、
             個人情報の入力はお控えください。
           </p>
+          <div className="mt-4 text-right">
+            <a href="#admin" className="text-slate-300 hover:text-slate-500 transition-colors">Admin</a>
+          </div>
         </div>
       </div>
     </footer>
