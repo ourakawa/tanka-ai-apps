@@ -24,6 +24,10 @@ const TankaInput: React.FC<TankaInputProps> = ({ onAnalyze, isLoading }) => {
     }
   };
 
+  const handleSampleClick = () => {
+    setText('「ごめんね」とまいた実家の除草剤母が施設に引っ越した夏');
+  };
+
   const isOverLimit = text.length > MAX_CHARS;
 
   return (
@@ -34,6 +38,18 @@ const TankaInput: React.FC<TankaInputProps> = ({ onAnalyze, isLoading }) => {
       
       <form onSubmit={handleSubmit} className="flex flex-col gap-6">
         <div className="relative">
+          <div className="flex justify-between items-end mb-2">
+            <span className="text-xs md:text-sm text-slate-400">
+              ※空白や改行は自動で調整されます
+            </span>
+            <button
+              type="button"
+              onClick={handleSampleClick}
+              className="text-xs md:text-sm bg-indigo-50 text-indigo-600 px-3 py-1 rounded hover:bg-indigo-100 transition-colors font-medium border border-indigo-100"
+            >
+              記入例を試す
+            </button>
+          </div>
           <textarea
             value={text}
             onChange={(e) => setText(e.target.value)}

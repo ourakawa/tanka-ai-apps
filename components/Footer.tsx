@@ -2,7 +2,7 @@
 import React from 'react';
 
 const Footer: React.FC = () => {
-  const APP_VERSION = "v1.1.1"; // クライアントバージョン
+  const APP_VERSION = "v1.2.1"; // クライアントバージョン
 
   return (
     <footer className="bg-slate-100 py-8 mt-auto border-t border-slate-200">

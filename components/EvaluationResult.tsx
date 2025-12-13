@@ -190,14 +190,13 @@ const EvaluationResult: React.FC<EvaluationResultProps> = ({ result, onReset }) 
         </div>
       </section>
 
-      {/* 5. Theme & Sample */}
-      <div className="grid md:grid-cols-2 gap-8">
-        {/* Theme Analysis */}
-        <section className="bg-white rounded-xl shadow-md p-6 border-t-4 border-pink-300">
-          <h3 className="text-lg font-bold text-slate-700 mb-4">
-            🔍 テーマ分析
-          </h3>
-          <div className="space-y-4">
+      {/* 5. Theme Analysis */}
+      <section className="bg-white rounded-xl shadow-md p-6 border-t-4 border-pink-300">
+        <h3 className="text-lg font-bold text-slate-700 mb-4">
+          🔍 テーマ分析
+        </h3>
+        <div className="space-y-4">
+          <div className="grid md:grid-cols-3 gap-4">
             <div>
               <span className="text-xs text-slate-400 block mb-1">ジャンル</span>
               <span className="inline-block bg-pink-100 text-pink-700 px-4 py-1 rounded-full text-sm font-bold">
@@ -206,10 +205,10 @@ const EvaluationResult: React.FC<EvaluationResultProps> = ({ result, onReset }) 
             </div>
             <div>
               <span className="text-xs text-slate-400 block mb-1">作品のトーン</span>
-              <p className="text-slate-700">{result.theme.tone}</p>
+              <p className="text-slate-700 text-sm">{result.theme.tone}</p>
             </div>
-             {/* New Style Analysis */}
-             {result.theme.style && (
+            {/* New Style Analysis */}
+            {result.theme.style && (
               <div>
                 <span className="text-xs text-slate-400 block mb-1">文体</span>
                 <span className="inline-block bg-slate-100 text-slate-600 px-3 py-0.5 rounded-sm text-sm">
@@ -217,31 +216,13 @@ const EvaluationResult: React.FC<EvaluationResultProps> = ({ result, onReset }) 
                 </span>
               </div>
             )}
-            <div className="pt-4 border-t border-slate-100">
-              <span className="text-xs text-slate-400 block mb-1">次におすすめのテーマ</span>
-              <p className="text-indigo-600 font-bold">{result.theme.nextTopicRecommendation}</p>
-            </div>
           </div>
-        </section>
-
-        {/* Reference Tanka */}
-        <section className="bg-white rounded-xl shadow-md p-6 border-t-4 border-teal-300">
-          <h3 className="text-lg font-bold text-slate-700 mb-4">
-            📖 参考になる一首 (実在する名歌)
-          </h3>
-          <blockquote className="relative p-4 bg-teal-50 rounded-lg mb-4">
-             <p className="font-serif text-xl text-slate-800 leading-loose mb-2">
-               {result.sample.text}
-             </p>
-             <footer className="text-right text-teal-800 font-medium text-sm">
-               — {result.sample.author}
-             </footer>
-          </blockquote>
-          <p className="text-sm text-slate-600 leading-relaxed">
-            {result.sample.explanation}
-          </p>
-        </section>
-      </div>
+          <div className="pt-4 border-t border-slate-100">
+            <span className="text-xs text-slate-400 block mb-1">次におすすめのテーマ</span>
+            <p className="text-indigo-600 font-bold">{result.theme.nextTopicRecommendation}</p>
+          </div>
+        </div>
+      </section>
 
       {/* Model & Version Display */}
       <div className="text-center mt-8 space-y-2">

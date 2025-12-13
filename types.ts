@@ -32,19 +32,12 @@ export interface ThemeAnalysis {
   nextTopicRecommendation: string;
 }
 
-export interface SampleTanka {
-  text: string;
-  author: string;
-  explanation: string;
-}
-
 export interface EvaluationResult {
   inputAnalysis: TankaPhrase[]; // 短歌の分解データ（5句分）
   scores: TankaScores;
   comments: TankaComments;
   advice: RevisionAdvice[];
   theme: ThemeAnalysis;
-  sample: SampleTanka;
   usedModel?: string; // 使用されたGeminiモデル名
   apiVersion?: string; // ★APIバージョン
 }
